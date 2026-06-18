@@ -17,7 +17,8 @@ from datetime import datetime
 
 from config import (
     PLAYLIST_FILE,
-    IMAGES_DIR,
+    ADS_DIR,
+    SHOWCASE_DIR,
     VIDEOS_DIR,
     CONTENT_VERSION_FILE,
     SUPPORTED_IMAGES,
@@ -31,32 +32,54 @@ from logger import logger
 
 def write_playlist():
 
-    images = discover_images()
+    ads = discover_ads()
 
     with open(
         PLAYLIST_FILE,
         "w"
     ) as f:
 
-        for image in images:
+        for image in ads:
 
             f.write(
                 f"{image}\n"
             )
 
     logger.info(
-        f"Playlist updated with {len(images)} image(s)"
+        f"Playlist updated with {len(ads)} ad image(s)"
     )
 
 
-def discover_images():
+def discover_ads():
     """
     Return alphabetically sorted image list.
     """
 
     images = []
 
-    for item in IMAGES_DIR.iterdir():
+    for item in ADS_DIR.iterdir():
+
+        if not item.is_file():
+            continue
+
+        if item.suffix.lower() in SUPPORTED_IMAGES:
+            images.append(item)
+
+    images.sort(
+        key=lambda p: p.name.lower()
+    )
+
+    return images
+
+
+def discover_showcase():
+    """
+    Return alphabetically sorted image list.
+    """
+
+    images = []
+
+    for item in SHOWCASE_DIR.iterdir():
 
         if not item.is_file():
             continue
@@ -124,13 +147,13 @@ def validate_content():
     Validate currently installed content.
     """
 
-    images = discover_images()
+    ads = discover_ads()
 
-    if len(images) < MIN_IMAGE_COUNT:
+    if len(ads) < MIN_IMAGE_COUNT:
 
         return (
             False,
-            f"Need at least {MIN_IMAGE_COUNT} image(s)"
+            f"Need at least {MIN_IMAGE_COUNT} ad image(s)"
         )
 
     videos = discover_videos()
@@ -152,7 +175,7 @@ def build_playlist():
 
     return [
         str(image)
-        for image in discover_images()
+        for image in discover_ads()
     ]
 
 
@@ -163,22 +186,20 @@ def write_content_version():
 
     video = discover_video()
 
-    images = discover_images()
+    ads = discover_ads()
 
     data = {
         "installed":
             datetime.now().isoformat(),
 
-        "image_count":
-            len(images),
+        "ad_count":
+            len(discover_ads()),
+
+        "showcase_count":
+            len(discover_showcase()),
 
         "video":
             video.name if video else None,
-
-        "images": [
-            image.name
-            for image in images
-        ]
     }
 
     with open(

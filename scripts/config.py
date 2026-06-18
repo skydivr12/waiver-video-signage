@@ -41,7 +41,10 @@ BACKUP_RETENTION = 10
 
 ROOT_DIR = Path("/opt/signage")
 
-IMAGES_DIR = ROOT_DIR / "images"
+ADS_DIR = ROOT_DIR / "ads"
+
+SHOWCASE_DIR = ROOT_DIR / "showcase"
+
 VIDEOS_DIR = ROOT_DIR / "videos"
 
 BACKUP_DIR = ROOT_DIR / "backups"
