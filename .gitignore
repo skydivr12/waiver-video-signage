@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+
+logs/
+backups/
+staging/
+
+images/
+videos/
+
+*.log
+
+*.tmp

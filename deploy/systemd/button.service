@@ -1,0 +1,23 @@
+[Unit]
+Description=Signage Button Service
+After=signage.service multi-user.target
+Requires=signage.service
+
+[Service]
+Type=simple
+
+User=pi
+Group=pi
+
+WorkingDirectory=/opt/signage/scripts
+
+ExecStartPre=/bin/sleep 10
+
+ExecStart=/usr/bin/python3 /opt/signage/scripts/button.py
+
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+
