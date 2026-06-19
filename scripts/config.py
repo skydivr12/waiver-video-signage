@@ -47,6 +47,12 @@ SHOWCASE_DIR = ROOT_DIR / "showcase"
 
 VIDEOS_DIR = ROOT_DIR / "videos"
 
+STAGING_ADS_DIR = STAGING_DIR / "ads"
+
+STAGING_SHOWCASE_DIR = STAGING_DIR / "showcase"
+
+STAGING_VIDEOS_DIR = STAGING_DIR / "videos"
+
 BACKUP_DIR = ROOT_DIR / "backups"
 STAGING_DIR = ROOT_DIR / "staging"
 

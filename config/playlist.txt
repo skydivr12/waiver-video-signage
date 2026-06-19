@@ -1,4 +1,4 @@
-/opt/signage/images/1000043528.jpg
-/opt/signage/images/1000043529.jpg
-/opt/signage/images/1000043530.jpg
-/opt/signage/images/1000043531.jpg
+/opt/signage/ads/1000043528.jpg
+/opt/signage/ads/1000043529.jpg
+/opt/signage/ads/1000043530.jpg
+/opt/signage/ads/1000043531.jpg

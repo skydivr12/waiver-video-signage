@@ -15,7 +15,8 @@ from config import (
     BACKUP_DIR,
     STAGING_DIR,
     BACKUP_RETENTION,
-    IMAGES_DIR,
+    ADS_DIR,
+    SHOWCASE_DIR,
     VIDEOS_DIR,
     UPDATE_LOCK_FILE,
     INSTALLED_VIDEO_NAME,
@@ -109,15 +110,19 @@ def validate_version(root):
 
 def validate_content(root):
 
-    images_dir = root / "images"
+    ads_dir = root / "ads"
+
+    showcase_dir = root / "showcase"
 
     videos_dir = root / "videos"
 
-    if not images_dir.exists():
-
+    if not ads_dir.exists():
         raise RuntimeError(
-            "Missing images folder"
+            "Missing ads folder"
         )
+
+    if not showcase_dir.exists():
+        showcase_dir.mkdir(exist_ok=True)
 
     if not videos_dir.exists():
 
@@ -125,9 +130,9 @@ def validate_content(root):
             "Missing videos folder"
         )
 
-    images = []
+    ads = []
 
-    for item in images_dir.iterdir():
+    for item in ads_dir.iterdir():
 
         if item.suffix.lower() in (
             ".jpg",
@@ -135,7 +140,19 @@ def validate_content(root):
             ".png"
         ):
 
-            images.append(item)
+            ads.append(item)
+
+    showcase_images = []
+
+    for item in showcase_dir.iterdir():
+
+        if item.suffix.lower() in (
+            ".jpg",
+            ".jpeg",
+            ".png"
+        ):
+
+            showcase_images.append(item)
 
     videos = []
 
@@ -149,7 +166,7 @@ def validate_content(root):
 
             videos.append(item)
 
-    if len(images) < 1:
+    if len(ads) < 1:
 
         raise RuntimeError(
             "No images found"
@@ -161,7 +178,7 @@ def validate_content(root):
             f"Expected 1 video, found {len(videos)}"
         )
 
-    return images, videos
+    return ads, showcase_images, videos
 
 
 def create_backup():
@@ -180,8 +197,13 @@ def create_backup():
     )
 
     shutil.copytree(
-        IMAGES_DIR,
-        backup_path / "images"
+        ADS_DIR,
+        backup_path / "ads"
+    )
+
+    shutil.copytree(
+        SHOWCASE_DIR,
+        backup_path / "showcase"
     )
 
     shutil.copytree(
@@ -238,8 +260,13 @@ def stage_update(root):
     )
 
     shutil.copytree(
-        root / "images",
-        STAGING_DIR / "images"
+        root / "ads",
+        STAGING_DIR / "ads"
+    )
+
+    shutil.copytree(
+        root / "showcase",
+        STAGING_DIR / "showcase"
     )
 
     shutil.copytree(
@@ -257,7 +284,15 @@ def stage_update(root):
 
 def validate_staging():
 
-    images_dir = (
+    ads_dir = STAGING_DIR / "ads"
+    showcase_dir = STAGING_DIR / "showcase"
+    videos_dir = STAGING_DIR / "videos"
+
+    ads_dir = (
+        STAGING_DIR / "images"
+    )
+
+    showcase_dir = (
         STAGING_DIR / "images"
     )
 
@@ -265,9 +300,9 @@ def validate_staging():
         STAGING_DIR / "videos"
     )
 
-    images = []
+    ads = []
 
-    for item in images_dir.iterdir():
+    for item in ads_dir.iterdir():
 
         if item.suffix.lower() in (
             ".jpg",
@@ -275,7 +310,19 @@ def validate_staging():
             ".png"
         ):
 
-            images.append(item)
+            ads.append(item)
+
+    showcase = []
+
+    for item in showcase_dir.iterdir():
+
+        if item.suffix.lower() in (
+            ".jpg",
+            ".jpeg",
+            ".png"
+        ):
+
+            showcase.append(item)
 
     videos = []
 
@@ -289,7 +336,7 @@ def validate_staging():
 
             videos.append(item)
 
-    if len(images) < 1:
+    if len(ads) < 1:
 
         raise RuntimeError(
             "Staging contains no images"
@@ -302,11 +349,19 @@ def validate_staging():
         )
 
     print(
-        f"Staging validation OK ({len(images)} images)"
+        f"Staging validation OK ({len(showcase)} images)"
     )
 
     logger.info(
-        f"Staging validation OK ({len(images)} images)"
+        f"Staging validation OK ({len(showcase)} images)"
+    )
+
+    print(
+        f"Staging validation OK ({len(ads)} images)"
+    )
+
+    logger.info(
+        f"Staging validation OK ({len(ads)} images)"
     )
 
 def create_update_lock():
@@ -331,12 +386,23 @@ def remove_update_lock():
 
 def install_update():
 
-    shutil.rmtree(IMAGES_DIR)
-    shutil.rmtree(VIDEOS_DIR)
+    if ADS_DIR.exists():
+        shutil.rmtree(ADS_DIR)
+
+    if SHOWCASE_DIR.exists():
+        shutil.rmtree(SHOWCASE_DIR)
+
+    if VIDEOS_DIR.exists():
+        shutil.rmtree(VIDEOS_DIR)
 
     shutil.move(
-        STAGING_DIR / "images",
-        IMAGES_DIR
+        STAGING_DIR / "ads",
+        ADS_DIR
+    )
+
+    shutil.move(
+        STAGING_DIR / "showcase",
+        SHOWCASE_DIR
     )
 
     VIDEOS_DIR.mkdir(
@@ -407,7 +473,7 @@ def main():
 
         validate_version(root)
 
-        images, videos = validate_content(root)
+        ads, showcase_images, videos = validate_content(root)
 
         create_backup()
 
@@ -430,8 +496,13 @@ def main():
             remove_update_lock()
 
         print(
-            f"Images found: {len(images)}"
+            f"Ads found: {len(ads)}"
         )
+
+        print(
+            f"Showcase images found: {len(showcase_images)}"
+        )
+
 
         print(
             f"Video found: {videos[0].name}"
@@ -442,7 +513,11 @@ def main():
         )
 
         logger.info(
-            f"Images found: {len(images)}"
+            f"Ads found: {len(ads)}"
+        )
+
+        logger.info(
+            f"Showcase images found: {len(showcase_images)}"
         )
 
         logger.info(
