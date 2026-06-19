@@ -12,6 +12,7 @@ Responsible for:
 """
 
 import json
+import random
 
 from datetime import datetime
 
@@ -32,21 +33,21 @@ from logger import logger
 
 def write_playlist():
 
-    ads = discover_ads()
+    playlist = build_playlist()
 
     with open(
         PLAYLIST_FILE,
         "w"
     ) as f:
 
-        for image in ads:
+        for image in playlist:
 
             f.write(
                 f"{image}\n"
             )
 
     logger.info(
-        f"Playlist updated with {len(ads)} ad image(s)"
+        f"Playlist updated with {len(playlist)} entries"
     )
 
 
@@ -167,17 +168,36 @@ def validate_content():
 
     return (True, "")
 
-
 def build_playlist():
-    """
-    Return playlist suitable for mpv.
-    """
 
-    return [
-        str(image)
-        for image in discover_ads()
-    ]
+    ads = discover_ads()
 
+    showcase = discover_showcase()
+
+    playlist = []
+
+    if not showcase:
+
+        return [
+            str(ad)
+            for ad in ads
+        ]
+
+    random.shuffle(showcase)
+
+    for showcase_image in showcase:
+
+        for ad in ads:
+
+            playlist.append(
+                str(ad)
+            )
+
+        playlist.append(
+            str(showcase_image)
+        )
+
+    return playlist
 
 def write_content_version():
     """
