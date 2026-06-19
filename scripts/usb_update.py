@@ -288,18 +288,6 @@ def validate_staging():
     showcase_dir = STAGING_DIR / "showcase"
     videos_dir = STAGING_DIR / "videos"
 
-    ads_dir = (
-        STAGING_DIR / "images"
-    )
-
-    showcase_dir = (
-        STAGING_DIR / "images"
-    )
-
-    videos_dir = (
-        STAGING_DIR / "videos"
-    )
-
     ads = []
 
     for item in ads_dir.iterdir():
@@ -349,19 +337,11 @@ def validate_staging():
         )
 
     print(
-        f"Staging validation OK ({len(showcase)} images)"
+        f"Staging validation OK ({len(ads)} ads, {len(showcase)} showcase)"
     )
 
     logger.info(
-        f"Staging validation OK ({len(showcase)} images)"
-    )
-
-    print(
-        f"Staging validation OK ({len(ads)} images)"
-    )
-
-    logger.info(
-        f"Staging validation OK ({len(ads)} images)"
+        f"Staging validation OK ({len(ads)} ads, {len(showcase)} showcase)"
     )
 
 def create_update_lock():
