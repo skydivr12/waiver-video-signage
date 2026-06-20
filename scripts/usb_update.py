@@ -11,7 +11,6 @@ from config import (
     UPDATE_KEY_FILENAME,
     UPDATE_KEY_CONTENT,
     UPDATE_VERSION_FILE,
-
     BACKUP_DIR,
     STAGING_DIR,
     BACKUP_RETENTION,
@@ -20,6 +19,7 @@ from config import (
     VIDEOS_DIR,
     UPDATE_LOCK_FILE,
     INSTALLED_VIDEO_NAME,
+    CONVERT_COMMAND,
 )
 
 from logger import logger
@@ -246,6 +246,33 @@ def cleanup_old_backups():
             f"Removed old backup: {oldest}"
         )
 
+def normalize_image(source, destination):
+
+    logger.info(
+        f"Normalizing image: {source.name}"
+    )
+
+    subprocess.run(
+        [
+            "convert",
+
+            str(source),
+
+            "-auto-orient",
+
+            "-resize",
+            "1920x1080>",
+
+            "-strip",
+
+            "-quality",
+            "90",
+
+            str(destination)
+        ],
+        check=True
+    )
+
 def stage_update(root):
 
     if STAGING_DIR.exists():
@@ -259,15 +286,33 @@ def stage_update(root):
         exist_ok=True
     )
 
-    shutil.copytree(
-        root / "ads",
-        STAGING_DIR / "ads"
+    (STAGING_DIR / "ads").mkdir(
+        parents=True,
+        exist_ok=True
     )
 
-    shutil.copytree(
-        root / "showcase",
-        STAGING_DIR / "showcase"
+    for image in (root / "ads").iterdir():
+
+        if image.is_file():
+
+            normalize_image(
+                image,
+                STAGING_DIR / "ads" / image.name
+            )
+
+    (STAGING_DIR / "showcase").mkdir(
+        parents=True,
+        exist_ok=True
     )
+
+    for image in (root / "showcase").iterdir():
+
+        if image.is_file():
+
+            normalize_image(
+                image,
+                STAGING_DIR / "showcase" / image.name
+            )
 
     shutil.copytree(
         root / "videos",

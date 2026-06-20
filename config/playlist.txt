@@ -1,6 +1,6 @@
 /opt/signage/ads/20191110_143150.jpg
 /opt/signage/ads/20251102_173404.jpg
-/opt/signage/showcase/20260609_140210.jpg
+/opt/signage/showcase/20251025_164857.jpg
 /opt/signage/ads/20191110_143150.jpg
 /opt/signage/ads/20251102_173404.jpg
 /opt/signage/showcase/normalized.jpg
@@ -9,4 +9,4 @@
 /opt/signage/showcase/1000043529.jpg
 /opt/signage/ads/20191110_143150.jpg
 /opt/signage/ads/20251102_173404.jpg
-/opt/signage/showcase/20251025_164857.jpg
+/opt/signage/showcase/20260609_140210.jpg
