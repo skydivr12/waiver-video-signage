@@ -31,6 +31,15 @@ from config import (
 from logger import logger
 
 
+SUPPORTED_AD_MEDIA = (
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".mp4",
+    ".mov",
+    ".mkv"
+)
+
 def write_playlist():
 
     playlist = build_playlist()
@@ -52,26 +61,22 @@ def write_playlist():
 
 
 def discover_ads():
-    """
-    Return alphabetically sorted image list.
-    """
 
-    images = []
+    media = []
 
     for item in ADS_DIR.iterdir():
 
         if not item.is_file():
             continue
 
-        if item.suffix.lower() in SUPPORTED_IMAGES:
-            images.append(item)
+        if item.suffix.lower() in SUPPORTED_AD_MEDIA:
+            media.append(item)
 
-    images.sort(
+    media.sort(
         key=lambda p: p.name.lower()
     )
 
-    return images
-
+    return media
 
 def discover_showcase():
     """

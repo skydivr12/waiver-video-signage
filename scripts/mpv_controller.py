@@ -35,14 +35,6 @@ class MPVController:
 
             sock.close()
 
-    def load_playlist(self, playlist):
-
-        self.command(
-            "loadlist",
-            str(playlist),
-            "replace"
-        )
-
     def load_file(self, filename):
 
         logger.info(

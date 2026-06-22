@@ -85,10 +85,6 @@ UPDATE_LOCK_FILE = (
     CONFIG_DIR / "update.lock"
 )
 
-UPDATE_LOCK_FILE = (
-    CONFIG_DIR / "update.lock"
-)
-
 INSTALLED_VIDEO_NAME = (
     "instruction.mp4"
 )

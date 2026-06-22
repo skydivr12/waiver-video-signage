@@ -137,7 +137,10 @@ def validate_content(root):
         if item.suffix.lower() in (
             ".jpg",
             ".jpeg",
-            ".png"
+            ".png",   # comma was missing — Python was silently joining ".png" and ".mp4" into ".png.mp4"
+            ".mp4",
+            ".mov",
+            ".mkv"
         ):
 
             ads.append(item)
@@ -254,7 +257,7 @@ def normalize_image(source, destination):
 
     subprocess.run(
         [
-            "convert",
+            CONVERT_COMMAND,   # was "convert" — now uses the full path from config.py so it works even if ImageMagick isn't on PATH
 
             str(source),
 
@@ -291,23 +294,51 @@ def stage_update(root):
         exist_ok=True
     )
 
-    for image in (root / "ads").iterdir():
-
-        if image.is_file():
-
-            normalize_image(
-                image,
-                STAGING_DIR / "ads" / image.name
-            )
-
+    # showcase directory must be created before we try to copy files into it
     (STAGING_DIR / "showcase").mkdir(
         parents=True,
         exist_ok=True
     )
 
+    for item in (root / "ads").iterdir():
+
+        if not item.is_file():
+            continue
+
+        if item.suffix.lower() in (
+            ".jpg",
+            ".jpeg",
+            ".png"
+        ):
+
+            normalize_image(
+                item,
+                STAGING_DIR / "ads" / item.name
+            )
+
+        elif item.suffix.lower() in (
+            ".mp4",
+            ".mov",
+            ".mkv"
+        ):
+
+            shutil.copy2(
+                item,
+                STAGING_DIR / "ads" / item.name
+            )
+
     for image in (root / "showcase").iterdir():
 
-        if image.is_file():
+        if not image.is_file():
+            continue
+
+        # Only process supported image types — previously any stray file
+        # (e.g. .DS_Store, .txt) would be passed to ImageMagick and cause a crash
+        if image.suffix.lower() in (
+            ".jpg",
+            ".jpeg",
+            ".png"
+        ):
 
             normalize_image(
                 image,
@@ -340,7 +371,10 @@ def validate_staging():
         if item.suffix.lower() in (
             ".jpg",
             ".jpeg",
-            ".png"
+            ".png",   # same missing comma fix as validate_content above
+            ".mp4",
+            ".mov",
+            ".mkv"
         ):
 
             ads.append(item)
@@ -381,12 +415,29 @@ def validate_staging():
             f"Staging expected 1 video, found {len(videos)}"
         )
 
+    ad_images = 0
+    ad_videos = 0
+
+    for item in ads:
+
+        if item.suffix.lower() in (
+            ".jpg",
+            ".jpeg",
+            ".png"
+        ):
+            ad_images += 1
+        else:
+            ad_videos += 1
+
     print(
-        f"Staging validation OK ({len(ads)} ads, {len(showcase)} showcase)"
+        f"Staging validation OK "
+        f"({ad_images} ad images, "
+        f"{ad_videos} ad videos, "
+        f"{len(showcase)} showcase)"
     )
 
     logger.info(
-        f"Staging validation OK ({len(ads)} ads, {len(showcase)} showcase)"
+        f"Staging validation OK  ({ad_images} ad images, {ad_videos} ad videos, {len(showcase)} showcase)"
     )
 
 def create_update_lock():

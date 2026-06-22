@@ -50,6 +50,10 @@ class Signage:
 
         self.slideshow = None
 
+        # Log file handles — kept as attributes so we can close them properly
+        self._slideshow_log = None
+        self._video_log = None
+
         signal.signal(
             signal.SIGTERM,
             self.shutdown_signal
@@ -93,11 +97,19 @@ class Signage:
 
     def start_slideshow(self):
 
+        # Guard: if a slideshow is somehow already running, stop it first.
+        # Without this, a content reload arriving while a video is playing
+        # could result in two mpv slideshow processes running at the same time.
+        if self.slideshow:
+            self.stop_slideshow()
+
         logger.info(
             "Starting slideshow"
         )
 
-        log = open(
+        # Open the log file using 'with' would close it immediately, so we keep
+        # a reference and close it when we stop the slideshow.
+        self._slideshow_log = open(
             SLIDESHOW_MPV_LOG,
             "a"
         )
@@ -116,8 +128,8 @@ class Signage:
 
                 f"--playlist={PLAYLIST_FILE}"
             ],
-            stdout=log,
-            stderr=log
+            stdout=self._slideshow_log,
+            stderr=self._slideshow_log
         )
 
     def stop_slideshow(self):
@@ -136,6 +148,11 @@ class Signage:
 
             self.slideshow = None
 
+            # Close the log file handle we opened in start_slideshow
+            if hasattr(self, "_slideshow_log") and self._slideshow_log:
+                self._slideshow_log.close()
+                self._slideshow_log = None
+
     def play_video(self):
 
         logger.info(
@@ -152,7 +169,7 @@ class Signage:
 
         video = get_video()
 
-        log = open(
+        self._video_log = open(
             VIDEO_MPV_LOG,
             "a"
         )
@@ -164,8 +181,8 @@ class Signage:
                 "--really-quiet",
                 video
             ],
-            stdout=log,
-            stderr=log
+            stdout=self._video_log,
+            stderr=self._video_log
         )
 
     def stop_video(self):
@@ -189,6 +206,11 @@ class Signage:
                 self.video_process.kill()
 
             self.video_process = None
+
+            # Close the log file handle we opened in play_video
+            if hasattr(self, "_video_log") and self._video_log:
+                self._video_log.close()
+                self._video_log = None
 
 
     def reload_content(self):
