@@ -20,6 +20,9 @@ from config import (
     UPDATE_LOCK_FILE,
     INSTALLED_VIDEO_NAME,
     CONVERT_COMMAND,
+    FFMPEG_COMMAND,
+    VIDEO_FRAMERATE,
+    VIDEO_CRF,
 )
 
 from logger import logger
@@ -137,7 +140,7 @@ def validate_content(root):
         if item.suffix.lower() in (
             ".jpg",
             ".jpeg",
-            ".png",   # comma was missing — Python was silently joining ".png" and ".mp4" into ".png.mp4"
+            ".png"
             ".mp4",
             ".mov",
             ".mkv"
@@ -257,19 +260,69 @@ def normalize_image(source, destination):
 
     subprocess.run(
         [
-            CONVERT_COMMAND,   # was "convert" — now uses the full path from config.py so it works even if ImageMagick isn't on PATH
+            CONVERT_COMMAND,    # full path from config — works even if convert is not on PATH
 
             str(source),
 
             "-auto-orient",
 
             "-resize",
-            "1920x1080>",
+            "1280x1080>",       # 1920 caused 1440-wide images to be skipped by the Pi GPU
 
             "-strip",
 
             "-quality",
             "90",
+
+            str(destination)
+        ],
+        check=True
+    )
+
+
+def normalize_video(source, destination):
+    """
+    Re-encode a video to a clean constant 30fps h264 file.
+
+    Source videos with variable or mismatched frame rates play at the wrong
+    speed on the Pi (e.g. a 28.95fps video encoded as 30fps plays at half
+    speed in VLC). Re-encoding to a true constant frame rate fixes this.
+
+    Also reduces bitrate significantly — the original 17Mbps source became
+    ~5Mbps after re-encoding with no visible quality loss at signage viewing
+    distances.
+    """
+
+    logger.info(
+        f"Normalizing video: {source.name}"
+    )
+
+    subprocess.run(
+        [
+            FFMPEG_COMMAND,
+
+            "-y",               # overwrite output without asking
+
+            "-i",
+            str(source),
+
+            "-vf",
+            f"fps={VIDEO_FRAMERATE}",   # force constant frame rate
+
+            "-c:v",
+            "libx264",
+
+            "-preset",
+            "fast",             # faster encode, slightly larger file than 'medium'
+
+            "-crf",
+            str(VIDEO_CRF),     # quality level — 23 is ffmpeg default
+
+            "-c:a",
+            "aac",
+
+            "-b:a",
+            "192k",
 
             str(destination)
         ],
@@ -294,7 +347,6 @@ def stage_update(root):
         exist_ok=True
     )
 
-    # showcase directory must be created before we try to copy files into it
     (STAGING_DIR / "showcase").mkdir(
         parents=True,
         exist_ok=True
@@ -322,33 +374,37 @@ def stage_update(root):
             ".mkv"
         ):
 
-            shutil.copy2(
+            # Normalise rather than copy — fixes variable frame rate issues
+            # that cause videos to play at wrong speed on the Pi
+            normalize_video(
                 item,
                 STAGING_DIR / "ads" / item.name
             )
 
     for image in (root / "showcase").iterdir():
 
-        if not image.is_file():
-            continue
-
-        # Only process supported image types — previously any stray file
-        # (e.g. .DS_Store, .txt) would be passed to ImageMagick and cause a crash
-        if image.suffix.lower() in (
-            ".jpg",
-            ".jpeg",
-            ".png"
-        ):
+        if image.is_file():
 
             normalize_image(
                 image,
                 STAGING_DIR / "showcase" / image.name
             )
 
-    shutil.copytree(
-        root / "videos",
-        STAGING_DIR / "videos"
-    )
+    # Normalise the instructional video rather than copying it raw
+    (STAGING_DIR / "videos").mkdir(parents=True, exist_ok=True)
+
+    for item in (root / "videos").iterdir():
+
+        if item.is_file() and item.suffix.lower() in (
+            ".mp4",
+            ".mov",
+            ".mkv"
+        ):
+
+            normalize_video(
+                item,
+                STAGING_DIR / "videos" / item.name
+            )
 
     print(
         "Content copied to staging."
@@ -371,7 +427,7 @@ def validate_staging():
         if item.suffix.lower() in (
             ".jpg",
             ".jpeg",
-            ".png",   # same missing comma fix as validate_content above
+            ".png"
             ".mp4",
             ".mov",
             ".mkv"

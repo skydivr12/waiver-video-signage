@@ -49,10 +49,14 @@ def write_playlist():
         "w"
     ) as f:
 
-        for image in playlist:
+        # M3U header is required for VLC to recognise the file as a playlist.
+        # Without it VLC tries to decode the text file as media and fails.
+        f.write("#EXTM3U\n")
+
+        for item in playlist:
 
             f.write(
-                f"{image}\n"
+                f"{item}\n"
             )
 
     logger.info(

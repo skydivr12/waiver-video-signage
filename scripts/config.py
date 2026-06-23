@@ -62,7 +62,7 @@ LOG_DIR = ROOT_DIR / "logs"
 CONFIG_DIR = ROOT_DIR / "config"
 
 PLAYLIST_FILE = (
-    CONFIG_DIR / "playlist.txt"
+    CONFIG_DIR / "playlist.m3u"  # M3U format required by VLC
 )
 
 CONTENT_VERSION_FILE = (
@@ -85,11 +85,26 @@ UPDATE_LOCK_FILE = (
     CONFIG_DIR / "update.lock"
 )
 
+UPDATE_LOCK_FILE = (
+    CONFIG_DIR / "update.lock"
+)
+
 INSTALLED_VIDEO_NAME = (
     "instruction.mp4"
 )
 
 CONVERT_COMMAND = "/usr/bin/convert"
+
+FFMPEG_COMMAND = "/usr/bin/ffmpeg"
+
+# Target frame rate for video normalisation.
+# Re-encoding to a clean 30fps fixes playback speed issues caused by
+# variable or mismatched frame rates in source videos.
+VIDEO_FRAMERATE = 30
+
+# CRF controls output quality. Lower = better quality, larger file.
+# 23 is ffmpeg's default and a good balance for signage.
+VIDEO_CRF = 23
 
 # ------------------------------------------------------------------
 # State Names
