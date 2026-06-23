@@ -361,19 +361,64 @@ for entry in "${PYTHON_LIBS[@]}"; do
 done
 
 # -----------------------------------------------------------------------------
-# Step 11: Clean up
+# Step 11: Display hardening (suppress boot text and login prompt on tty1)
 # -----------------------------------------------------------------------------
 
-header "Step 11: Cleaning up"
+header "Step 11: Display hardening"
+
+CMDLINE_FILE="/boot/firmware/cmdline.txt"
+
+if [ -f "$CMDLINE_FILE" ]; then
+    # Back up the original before modifying
+    cp "$CMDLINE_FILE" "${CMDLINE_FILE}.bak"
+    success "Backed up original cmdline.txt to ${CMDLINE_FILE}.bak"
+
+    # Read the existing line so we preserve root=, rootfstype=, and any other
+    # Pi-managed parameters (these are tied to whichever storage device is in
+    # use — SD card or SSD — and must not be hardcoded here)
+    CURRENT="$(cat "$CMDLINE_FILE")"
+
+    # Remove parameters we are about to set, so we don't end up with duplicates
+    CURRENT="$(echo "$CURRENT" | sed \
+        -e 's/console=tty[0-9][^ ]*//g' \
+        -e 's/quiet//g' \
+        -e 's/loglevel=[^ ]*//g' \
+        -e 's/logo\.nologo//g' \
+        -e 's/vt\.global_cursor_default=[^ ]*//g' \
+        -e 's/  */ /g' \
+        -e 's/^ //;s/ $//')"
+
+    # Append the display-hardening parameters
+    NEW="$CURRENT console=tty3 quiet loglevel=0 logo.nologo vt.global_cursor_default=0"
+
+    # cmdline.txt must be a single line with a trailing newline
+    printf '%s\n' "$NEW" > "$CMDLINE_FILE"
+    success "Updated $CMDLINE_FILE (root= and other boot params preserved)"
+else
+    warn "$CMDLINE_FILE not found — skipping kernel cmdline update (not running on a Pi?)"
+fi
+
+# Disable and mask the getty on tty1 so no login prompt appears on the display
+systemctl disable getty@tty1.service
+success "Disabled getty@tty1.service"
+
+systemctl mask getty@tty1
+success "Masked getty@tty1"
+
+# -----------------------------------------------------------------------------
+# Step 12: Clean up
+# -----------------------------------------------------------------------------
+
+header "Step 12: Cleaning up"
 
 rm -rf "$REPO_DIR"
 success "Removed temporary clone: $REPO_DIR"
 
 # -----------------------------------------------------------------------------
-# Step 12: Start services
+# Step 13: Start services
 # -----------------------------------------------------------------------------
 
-header "Step 12: Starting services"
+header "Step 13: Starting services"
 
 info "Starting signage.service..."
 systemctl start signage.service
