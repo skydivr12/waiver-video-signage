@@ -5,8 +5,13 @@ logs/
 backups/
 staging/
 
-images/
+ads/
+showcase/
 videos/
+
+config/content_version.json
+config/playlist.m3u
+config/playlist.txt
 
 *.log
 
