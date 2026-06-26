@@ -28,12 +28,52 @@ from config import (
 from logger import logger
 
 
-def find_usb_device():
+def find_mounted_update_drive():
 
     result = subprocess.run(
-        ["blkid"],
+        [
+            "lsblk",
+            "-P",
+            "-o",
+            "NAME,RM,FSTYPE,MOUNTPOINT"
+        ],
         capture_output=True,
-        text=True
+        text=True,
+        check=True
+    )
+
+    for line in result.stdout.splitlines():
+
+        fields = {}
+
+        for item in line.split():
+
+            key, value = item.split("=", 1)
+            fields[key] = value.strip('"')
+
+        if (
+            fields.get("RM") == "1"
+            and fields.get("FSTYPE") == "exfat"
+            and fields.get("MOUNTPOINT")
+        ):
+
+            return (
+                fields["NAME"],
+                Path(fields["MOUNTPOINT"])
+            )
+
+    return None
+
+
+def find_exfat_device():
+
+    result = subprocess.run(
+        [
+            "blkid"
+        ],
+        capture_output=True,
+        text=True,
+        check=True
     )
 
     for line in result.stdout.splitlines():
@@ -44,8 +84,39 @@ def find_usb_device():
 
     return None
 
+def mount_usb():
+    """
+    Returns:
+        (root_path, mounted_here)
 
-def mount_usb(device):
+    root_path     - Path to the mounted update drive.
+    mounted_here  - True if we mounted it ourselves and should unmount later.
+                    False if the OS had already mounted it.
+    """
+
+    mounted = find_mounted_update_drive()
+
+    if mounted is not None:
+
+        device, mountpoint = mounted
+
+        logger.info(
+            f"Using already-mounted USB: {device} at {mountpoint}"
+        )
+
+        return mountpoint, False
+
+    device = find_exfat_device()
+
+    if device is None:
+        raise RuntimeError(
+            "No exFAT update drive found."
+        )
+
+    Path(USB_MOUNT_POINT).mkdir(
+        parents=True,
+        exist_ok=True
+    )
 
     subprocess.run(
         [
@@ -58,17 +129,20 @@ def mount_usb(device):
         check=True
     )
 
+    logger.info(
+        f"Mounted {device} at {USB_MOUNT_POINT}"
+    )
 
-def unmount_usb():
+    return Path(USB_MOUNT_POINT), True
 
+def unmount_usb(root):
     subprocess.run(
         [
             "umount",
-            USB_MOUNT_POINT
+            str(root)
         ],
         check=True
     )
-
 
 def validate_key(root):
 
@@ -133,20 +207,20 @@ def validate_content(root):
             "Missing videos folder"
         )
 
-    ads = []
+    ad_media = []
 
     for item in ads_dir.iterdir():
 
         if item.suffix.lower() in (
             ".jpg",
             ".jpeg",
-            ".png"
+            ".png",
             ".mp4",
             ".mov",
             ".mkv"
         ):
 
-            ads.append(item)
+            ad_media.append(item)
 
     showcase_images = []
 
@@ -172,10 +246,10 @@ def validate_content(root):
 
             videos.append(item)
 
-    if len(ads) < 1:
+    if len(ad_media) < 1:
 
         raise RuntimeError(
-            "No images found"
+            "No ad media found"
         )
 
     if len(videos) != 1:
@@ -184,7 +258,7 @@ def validate_content(root):
             f"Expected 1 video, found {len(videos)}"
         )
 
-    return ads, showcase_images, videos
+    return ad_media, showcase_images, videos
 
 
 def create_backup():
@@ -420,20 +494,20 @@ def validate_staging():
     showcase_dir = STAGING_DIR / "showcase"
     videos_dir = STAGING_DIR / "videos"
 
-    ads = []
+    ad_media = []
 
     for item in ads_dir.iterdir():
 
         if item.suffix.lower() in (
             ".jpg",
             ".jpeg",
-            ".png"
+            ".png",
             ".mp4",
             ".mov",
             ".mkv"
         ):
 
-            ads.append(item)
+            ad_media.append(item)
 
     showcase = []
 
@@ -459,10 +533,10 @@ def validate_staging():
 
             videos.append(item)
 
-    if len(ads) < 1:
+    if len(ad_media) < 1:
 
         raise RuntimeError(
-            "Staging contains no images"
+            "Staging contains no ad media"
         )
 
     if len(videos) != 1:
@@ -474,7 +548,7 @@ def validate_staging():
     ad_images = 0
     ad_videos = 0
 
-    for item in ads:
+    for item in ad_media:
 
         if item.suffix.lower() in (
             ".jpg",
@@ -572,34 +646,9 @@ def reload_signage():
 
 def main():
 
-    device = find_usb_device()
-
-    if not device:
-
-        print(
-            "No USB device found."
-        )
-
-        logger.info(
-            "No USB device found."
-        )
-        return
-
-    print(
-        f"USB device: {device}"
-    )
-
-    logger.info(
-        f"USB device: {device}"
-    )
-
-    mount_usb(device)
+    root, mounted_here = mount_usb()
 
     try:
-
-        root = Path(
-            USB_MOUNT_POINT
-        )
 
         validate_key(root)
 
@@ -627,49 +676,29 @@ def main():
 
             remove_update_lock()
 
-        print(
-            f"Ads found: {len(ads)}"
-        )
+        print(f"Ads found: {len(ads)}")
+        print(f"Showcase images found: {len(showcase_images)}")
+        print(f"Video found: {videos[0].name}")
+        print("Update successful.")
 
-        print(
-            f"Showcase images found: {len(showcase_images)}"
-        )
-
-
-        print(
-            f"Video found: {videos[0].name}"
-        )
-
-        print(
-            "Update successful."
-        )
-
-        logger.info(
-            f"Ads found: {len(ads)}"
-        )
-
-        logger.info(
-            f"Showcase images found: {len(showcase_images)}"
-        )
-
-        logger.info(
-            f"Video found: {videos[0].name}"
-        )
-
-        logger.info(
-            "Update successful."
-        )
+        logger.info(f"Ads found: {len(ads)}")
+        logger.info(f"Showcase images found: {len(showcase_images)}")
+        logger.info(f"Video found: {videos[0].name}")
+        logger.info("Update successful.")
 
     finally:
 
-        try:
-            unmount_usb()
+        if mounted_here:
 
-        except Exception as e:
+            try:
 
-            logger.error(
-                f"Unmount failed: {e}"
-            )
+                unmount_usb(root)
+
+            except Exception as e:
+
+                logger.warning(
+                    f"Could not unmount USB: {e}"
+                )
 
 if __name__ == "__main__":
 
