@@ -480,6 +480,10 @@ def stage_update(root):
                 STAGING_DIR / "videos" / item.name
             )
 
+    print(STAGING_DIR)
+    print(STAGING_DIR.exists())
+    print(list(STAGING_DIR.iterdir()))
+
     print(
         "Content copied to staging."
     )
@@ -489,6 +493,10 @@ def stage_update(root):
     )
 
 def validate_staging():
+
+    print("validate_staging()")
+    print(STAGING_DIR)
+    print(STAGING_DIR.exists())
 
     ads_dir = STAGING_DIR / "ads"
     showcase_dir = STAGING_DIR / "showcase"
