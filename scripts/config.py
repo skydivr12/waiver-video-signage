@@ -33,8 +33,6 @@ SHORT_PRESS_MAX = 2
 
 REBOOT_PRESS_SECONDS = 5
 
-BACKUP_RETENTION = 10
-
 # ------------------------------------------------------------------
 # Paths
 # ------------------------------------------------------------------
@@ -46,16 +44,6 @@ ADS_DIR = ROOT_DIR / "ads"
 SHOWCASE_DIR = ROOT_DIR / "showcase"
 
 VIDEOS_DIR = ROOT_DIR / "videos"
-
-STAGING_DIR = ROOT_DIR / "staging"
-
-STAGING_ADS_DIR = STAGING_DIR / "ads"
-
-STAGING_SHOWCASE_DIR = STAGING_DIR / "showcase"
-
-STAGING_VIDEOS_DIR = STAGING_DIR / "videos"
-
-BACKUP_DIR = ROOT_DIR / "backups"
 
 LOG_DIR = ROOT_DIR / "logs"
 
@@ -69,8 +57,6 @@ CONTENT_VERSION_FILE = (
     CONFIG_DIR / "content_version.json"
 )
 
-MPV_SOCKET = "/tmp/mpv.sock"
-
 SLIDESHOW_MPV_SOCKET = "/tmp/mpv_slideshow.sock"
 
 SLIDESHOW_MPV_LOG = (
@@ -79,10 +65,6 @@ SLIDESHOW_MPV_LOG = (
 
 VIDEO_MPV_LOG = (
     LOG_DIR / "mpv_video.log"
-)
-
-UPDATE_LOCK_FILE = (
-    CONFIG_DIR / "update.lock"
 )
 
 UPDATE_LOCK_FILE = (
@@ -148,6 +130,10 @@ SLIDESHOW_TRANSITION = "none"
 # ------------------------------------------------------------------
 
 SOCKET_PATH = "/tmp/signage.sock"
+
+VLC_HOST     = "127.0.0.1"
+VLC_PORT     = 8080
+VLC_PASSWORD = "signage"
 
 # ------------------------------------------------------------------
 # IPC Commands
