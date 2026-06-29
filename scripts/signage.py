@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import shutil
 import socket
 import subprocess
 import time
@@ -14,6 +15,7 @@ from config import (
     CMD_RELOAD_CONTENT,
     CMD_REBOOT,
     CMD_SHUTDOWN,
+    CMD_ROLLBACK,
     STATE_BOOTING,
     STATE_READY,
     STATE_PLAYING,
@@ -22,6 +24,11 @@ from config import (
     VLC_HOST,
     VLC_PORT,
     VLC_PASSWORD,
+    ADS_DIR,
+    SHOWCASE_DIR,
+    VIDEOS_DIR,
+    PREVIOUS_DIR,
+    MANIFEST_FILE,
 )
 from logger import logger
 from ipc import IPCServer
@@ -43,9 +50,6 @@ _vlc_opener = urllib.request.build_opener(
 )
 
 # Watchdog interval: ping at half the period systemd expects.
-# WATCHDOG_USEC is set by systemd when WatchdogSec is configured in the
-# service file. If it's absent (e.g. running manually) the watchdog is
-# disabled and sd_notify() becomes a no-op.
 _WATCHDOG_INTERVAL = int(os.environ.get("WATCHDOG_USEC", 0)) / 2_000_000
 _last_watchdog = 0.0
 
@@ -64,7 +68,6 @@ def sd_notify(msg: str):
 
 
 def _ping_watchdog():
-    """Ping systemd watchdog if the interval has elapsed."""
     global _last_watchdog
     if not _WATCHDOG_INTERVAL:
         return
@@ -172,7 +175,6 @@ class Signage:
             stdout=self._vlc_log,
             stderr=self._vlc_log,
         )
-        # Wait until VLC's HTTP interface is ready
         for _ in range(30):
             if vlc_request("/status.json") is not None:
                 break
@@ -236,6 +238,37 @@ class Signage:
         self.led.set_state(STATE_READY)
 
     # ------------------------------------------------------------------
+    # Rollback
+    # ------------------------------------------------------------------
+
+    def rollback_content(self):
+        """Restore content from the snapshot saved before the last update."""
+        if not PREVIOUS_DIR.exists():
+            logger.warning("No previous snapshot available — rollback skipped")
+            return
+
+        logger.info("Rolling back to previous content")
+        self.led.set_state(STATE_UPDATING)
+        self.stop_slideshow()
+
+        for name, dest in [("ads", ADS_DIR), ("showcase", SHOWCASE_DIR), ("videos", VIDEOS_DIR)]:
+            src = PREVIOUS_DIR / name
+            if dest.exists():
+                shutil.rmtree(dest)
+            if src.exists():
+                shutil.copytree(src, dest)
+
+        prev_manifest = PREVIOUS_DIR / "manifest.json"
+        if prev_manifest.exists():
+            shutil.copy2(prev_manifest, MANIFEST_FILE)
+
+        write_playlist()
+        write_content_version()
+        self.start_slideshow()
+        self.led.set_state(STATE_READY)
+        logger.info("Rollback complete")
+
+    # ------------------------------------------------------------------
     # Cleanup / system
     # ------------------------------------------------------------------
 
@@ -264,8 +297,6 @@ class Signage:
         write_content_version()
         self.start_slideshow()
         self.led.set_state(STATE_READY)
-
-        # Tell systemd the service is fully up and ready.
         sd_notify("READY=1")
 
         while self.running:
@@ -293,6 +324,8 @@ class Signage:
                 self.play_video()
             elif command == CMD_RELOAD_CONTENT:
                 self.reload_content()
+            elif command == CMD_ROLLBACK:
+                self.rollback_content()
             elif command == CMD_REBOOT:
                 self.reboot()
             elif command == CMD_SHUTDOWN:

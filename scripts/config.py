@@ -21,6 +21,8 @@ LOG_LEVEL = "INFO"
 # ------------------------------------------------------------------
 
 BUTTON_PIN = 17
+POWER_BUTTON_PIN    = 3
+ROLLBACK_BUTTON_PIN = 27
 LED_PIN = 18
 
 # ------------------------------------------------------------------
@@ -28,7 +30,9 @@ LED_PIN = 18
 # ------------------------------------------------------------------
 
 IMAGE_DISPLAY_SECONDS = 10
-
+POWER_REBOOT_SECONDS   = 3
+POWER_SHUTDOWN_SECONDS = 6
+ROLLBACK_PRESS_SECONDS = 3
 SHORT_PRESS_MAX = 2
 
 REBOOT_PRESS_SECONDS = 5
@@ -38,7 +42,8 @@ REBOOT_PRESS_SECONDS = 5
 # ------------------------------------------------------------------
 
 ROOT_DIR = Path("/opt/signage")
-
+PREVIOUS_DIR  = ROOT_DIR / "previous"
+MANIFEST_FILE = ROOT_DIR / "installed_manifest.json"
 ADS_DIR = ROOT_DIR / "ads"
 
 SHOWCASE_DIR = ROOT_DIR / "showcase"
@@ -130,7 +135,7 @@ SLIDESHOW_TRANSITION = "none"
 # ------------------------------------------------------------------
 
 SOCKET_PATH = "/tmp/signage.sock"
-
+CMD_ROLLBACK = "ROLLBACK"
 VLC_HOST     = "127.0.0.1"
 VLC_PORT     = 8080
 VLC_PASSWORD = "signage"

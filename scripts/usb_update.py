@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import hashlib
 import json
-import subprocess
 import shutil
+import subprocess
 from datetime import datetime
 from pathlib import Path
 from ipc import IPCClient
@@ -14,6 +14,8 @@ from config import (
     ADS_DIR,
     SHOWCASE_DIR,
     VIDEOS_DIR,
+    PREVIOUS_DIR,
+    MANIFEST_FILE,
     UPDATE_LOCK_FILE,
     INSTALLED_VIDEO_NAME,
     CONVERT_COMMAND,
@@ -23,14 +25,10 @@ from config import (
 )
 from logger import logger
 
-# Tracks which USB source files are installed and what their hash was.
-# Lives next to the content dirs so everything stays in one place.
-MANIFEST_FILE = ADS_DIR.parent / "installed_manifest.json"
-
-AD_EXTENSIONS      = {".jpg", ".jpeg", ".png", ".mp4", ".mov", ".mkv"}
+AD_EXTENSIONS       = {".jpg", ".jpeg", ".png", ".mp4", ".mov", ".mkv"}
 SHOWCASE_EXTENSIONS = {".jpg", ".jpeg", ".png"}
-VIDEO_EXTENSIONS   = {".mp4", ".mov", ".mkv"}
-IMAGE_EXTENSIONS   = {".jpg", ".jpeg", ".png"}
+VIDEO_EXTENSIONS    = {".mp4", ".mov", ".mkv"}
+IMAGE_EXTENSIONS    = {".jpg", ".jpeg", ".png"}
 
 
 # ---------------------------------------------------------------------------
@@ -115,8 +113,8 @@ def validate_version(root):
 
 def validate_content(root):
     """Basic sanity check on USB structure before we start syncing."""
-    ads_dir     = root / "ads"
-    videos_dir  = root / "videos"
+    ads_dir      = root / "ads"
+    videos_dir   = root / "videos"
     showcase_dir = root / "showcase"
 
     if not ads_dir.exists():
@@ -124,7 +122,6 @@ def validate_content(root):
     if not videos_dir.exists():
         raise RuntimeError("Missing videos folder")
 
-    # showcase is optional — create it if absent so iteration is safe
     showcase_dir.mkdir(exist_ok=True)
 
     ad_media = [f for f in ads_dir.iterdir()
@@ -161,7 +158,7 @@ def normalize_image(source: Path, destination: Path):
             CONVERT_COMMAND,
             str(source),
             "-auto-orient",
-            "-resize", "1280x1080>",   # 1920 caused 1440-wide images to be skipped by the Pi GPU
+            "-resize", "1280x1080>",
             "-strip",
             "-quality", "90",
             str(destination),
@@ -173,10 +170,7 @@ def normalize_image(source: Path, destination: Path):
 def normalize_video(source: Path, destination: Path):
     """
     Re-encode to a true constant frame-rate h264 file.
-    Variable / mismatched frame rates cause wrong-speed playback on the Pi
-    (e.g. 28.95fps encoded as 30fps plays at half speed in VLC).
-    Also significantly reduces bitrate with no visible quality loss at
-    signage viewing distances.
+    Variable / mismatched frame rates cause wrong-speed playback on the Pi.
     """
     logger.info(f"Normalizing video: {source.name}")
     subprocess.run(
@@ -219,6 +213,38 @@ def save_manifest(manifest: dict):
     MANIFEST_FILE.write_text(json.dumps(manifest, indent=2))
 
 
+def verify_manifest_integrity(manifest: dict):
+    """Remove entries where the installed file is missing so they get reinstalled."""
+    missing = [rel for rel in list(manifest) if not installed_path(rel).exists()]
+    for rel in missing:
+        logger.warning(f"Manifest entry missing on disk, will reinstall: {rel}")
+        del manifest[rel]
+
+
+# ---------------------------------------------------------------------------
+# Snapshot
+# ---------------------------------------------------------------------------
+
+def save_snapshot():
+    """
+    Save the current installed content to PREVIOUS_DIR before applying an
+    update. This gives the rollback button something to restore to.
+    Only snapshots if there is content to save.
+    """
+    if not ADS_DIR.exists():
+        return
+    logger.info("Saving snapshot of current content...")
+    if PREVIOUS_DIR.exists():
+        shutil.rmtree(PREVIOUS_DIR)
+    PREVIOUS_DIR.mkdir(parents=True, exist_ok=True)
+    for src, name in [(ADS_DIR, "ads"), (SHOWCASE_DIR, "showcase"), (VIDEOS_DIR, "videos")]:
+        if src.exists():
+            shutil.copytree(src, PREVIOUS_DIR / name)
+    if MANIFEST_FILE.exists():
+        shutil.copy2(MANIFEST_FILE, PREVIOUS_DIR / "manifest.json")
+    logger.info("Snapshot saved.")
+
+
 # ---------------------------------------------------------------------------
 # Sync
 # ---------------------------------------------------------------------------
@@ -231,7 +257,6 @@ def installed_path(rel: str) -> Path:
     if subdir == "showcase":
         return SHOWCASE_DIR / filename
     if subdir == "videos":
-        # All videos are installed under a single canonical name.
         return VIDEOS_DIR / INSTALLED_VIDEO_NAME
     raise ValueError(f"Unknown content subdirectory: {subdir}")
 
@@ -240,7 +265,6 @@ def get_usb_files(root: Path) -> dict:
     """
     Scan USB content directories and return:
         { relative_path: (absolute_path, md5_hash) }
-    relative_path is e.g. 'ads/foo.jpg', 'videos/promo.mp4'
     """
     files = {}
     scan = [
@@ -265,7 +289,8 @@ def sync_content(root: Path) -> bool:
     Sync USB content to installed dirs.
     Returns True if anything changed (caller should reload signage).
     """
-    manifest  = load_manifest()
+    manifest = load_manifest()
+    verify_manifest_integrity(manifest)
     usb_files = get_usb_files(root)
 
     to_install = {
@@ -279,25 +304,24 @@ def sync_content(root: Path) -> bool:
         logger.info("Content already up to date — nothing to do.")
         return False
 
+    # Snapshot current content before making any changes
+    save_snapshot()
+
     # Install new / changed files
     for rel, (src, src_hash) in to_install.items():
         dest = installed_path(rel)
         logger.info(f"Installing: {rel}")
         normalize_and_install(src, dest)
 
-    # Delete files that were removed from the USB
+    # Delete files removed from USB
     for rel in to_delete:
         dest = installed_path(rel)
         if dest.exists():
             dest.unlink()
             logger.info(f"Deleted: {rel}")
 
-    # Persist updated manifest (USB source hashes, pre-normalization)
     save_manifest({rel: h for rel, (_, h) in usb_files.items()})
-
-    logger.info(
-        f"Sync complete — {len(to_install)} installed, {len(to_delete)} deleted."
-    )
+    logger.info(f"Sync complete — {len(to_install)} installed, {len(to_delete)} deleted.")
     return True
 
 
