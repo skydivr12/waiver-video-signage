@@ -9,8 +9,11 @@ ads/
 showcase/
 videos/
 
+# Runtime-generated files
 config/content_version.json
 config/playlist.m3u
+installed_manifest.json
+previous/manifest.json
 config/playlist.txt
 
 *.log
