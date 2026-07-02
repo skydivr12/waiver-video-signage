@@ -9,7 +9,7 @@
 # structure, install services and udev rules, and start everything up.
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/skydivr12/waiver-video-signage/development/deploy.sh | sudo bash
+#   curl -fsSL https://raw.githubusercontent.com/skydivr12/waiver-video-signage/master/deploy.sh | sudo bash
 #
 #   or if you already have the file:
 #   chmod +x deploy.sh && sudo ./deploy.sh
@@ -28,7 +28,7 @@ set -e
 # -----------------------------------------------------------------------------
 
 REPO_URL="https://github.com/skydivr12/waiver-video-signage"
-REPO_BRANCH="development"
+REPO_BRANCH="master"
 REPO_DIR="/tmp/waiver-video-signage"
 
 INSTALL_ROOT="/opt/signage"
