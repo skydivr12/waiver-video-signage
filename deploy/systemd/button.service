@@ -11,6 +11,8 @@ Group=pi
 
 WorkingDirectory=/opt/signage/scripts
 
+Environment=GPIOZERO_PIN_FACTORY=lgpio
+
 ExecStartPre=/bin/sleep 10
 
 ExecStart=/usr/bin/python3 /opt/signage/scripts/button.py
