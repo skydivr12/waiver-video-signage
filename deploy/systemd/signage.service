@@ -4,15 +4,19 @@ After=local-fs.target
 Wants=local-fs.target
 
 [Service]
-Type=simple
+Type=notify
+NotifyAccess=main
 
 User=pi
 Group=pi
 
 WorkingDirectory=/opt/signage/scripts
 
+Environment=GPIOZERO_PIN_FACTORY=lgpio
+
 ExecStart=/usr/bin/python3 /opt/signage/scripts/signage.py
 
+WatchdogSec=30
 Restart=always
 RestartSec=5
 
