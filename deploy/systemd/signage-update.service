@@ -5,6 +5,7 @@ After=local-fs.target
 [Service]
 Type=oneshot
 User=root
+WorkingDirectory=/opt/signage/scripts
 ExecStart=/usr/bin/python3 /opt/signage/scripts/usb_update.py
 
 [Install]
