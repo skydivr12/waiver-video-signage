@@ -213,7 +213,6 @@ SCRIPTS=(
     "config.py"
     "content_manager.py"
     "usb_update.py"
-    "mpv_controller.py"
 )
 
 for script in "${SCRIPTS[@]}"; do
