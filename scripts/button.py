@@ -115,10 +115,18 @@ main_button     = Button(BUTTON_PIN,          pull_up=True, bounce_time=0.1)
 power_button    = Button(POWER_BUTTON_PIN,    pull_up=True, bounce_time=0.1)
 rollback_button = Button(ROLLBACK_BUTTON_PIN, pull_up=True, bounce_time=0.1)
 
-main_button.when_pressed      = lambda: press_times.update({"main": time.time()})
+def main_pressed():
+    press_times["main"] = time.time()
+    logger.info("Main button pressed")
+
+def rollback_pressed():
+    press_times["rollback"] = time.time()
+    logger.info("Rollback button pressed")
+
+main_button.when_pressed      = main_pressed
 main_button.when_released     = main_released
 power_button.when_pressed     = power_pressed
-rollback_button.when_pressed  = lambda: press_times.update({"rollback": time.time()})
+rollback_button.when_pressed  = rollback_pressed
 rollback_button.when_released = rollback_released
 
 logger.info("Button service started")
