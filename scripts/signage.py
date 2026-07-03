@@ -209,6 +209,7 @@ class Signage:
                 "--fullscreen",
                 "--no-video-title-show",
                 "--no-osd",
+                "--aout=alsa",
                 "--play-and-exit",
                 get_video(),
             ],
@@ -281,6 +282,7 @@ class Signage:
     def reboot(self):
         logger.info("Reboot requested")
         self.running = False
+        self.led.set_state(STATE_BOOTING)  # slow pulse while shutting down
         self.cleanup()
         subprocess.run(["sudo", "reboot"])
 
@@ -302,12 +304,12 @@ class Signage:
         while self.running:
             _ping_watchdog()
 
-            # Video finished — resume slideshow
+            # Video finished — triple blink to signal resume, then restart slideshow
             if self.video_process and self.video_process.poll() is not None:
                 logger.info("Video finished — resuming slideshow")
                 self.stop_video()
+                self.led.set_state(STATE_PLAYING)  # one-shot triple blink then off
                 self.start_slideshow()
-                self.led.set_state(STATE_READY)
 
             # VLC crashed — restart slideshow
             if self.vlc and self.vlc.poll() is not None:
@@ -329,6 +331,7 @@ class Signage:
             elif command == CMD_REBOOT:
                 self.reboot()
             elif command == CMD_SHUTDOWN:
+                self.led.set_state(STATE_BOOTING)  # slow pulse while shutting down
                 self.running = False
 
         self.cleanup()

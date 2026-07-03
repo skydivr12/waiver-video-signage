@@ -17,7 +17,6 @@ from config import (
     PREVIOUS_DIR,
     MANIFEST_FILE,
     UPDATE_LOCK_FILE,
-    INSTALLED_VIDEO_NAME,
     CONVERT_COMMAND,
     FFMPEG_COMMAND,
     VIDEO_FRAMERATE,
@@ -257,7 +256,7 @@ def installed_path(rel: str) -> Path:
     if subdir == "showcase":
         return SHOWCASE_DIR / filename
     if subdir == "videos":
-        return VIDEOS_DIR / INSTALLED_VIDEO_NAME
+        return VIDEOS_DIR / filename
     raise ValueError(f"Unknown content subdirectory: {subdir}")
 
 
@@ -313,9 +312,15 @@ def sync_content(root: Path) -> bool:
         logger.info(f"Installing: {rel}")
         normalize_and_install(src, dest)
 
-    # Delete files removed from USB
+    # Delete files removed from USB — but skip if the destination was just
+    # reinstalled by a different source filename (e.g. video renamed on USB
+    # but still maps to the same instruction.mp4 on disk)
+    freshly_installed = {installed_path(rel) for rel in to_install}
     for rel in to_delete:
         dest = installed_path(rel)
+        if dest in freshly_installed:
+            logger.info(f"Skipping delete of {rel} — destination was just reinstalled")
+            continue
         if dest.exists():
             dest.unlink()
             logger.info(f"Deleted: {rel}")
