@@ -30,12 +30,14 @@ LED_PIN = 18
 # ------------------------------------------------------------------
 
 IMAGE_DISPLAY_SECONDS = 10
-POWER_REBOOT_SECONDS   = 3
-POWER_SHUTDOWN_SECONDS = 6
+POWER_REBOOT_PRESSES   = 3     # presses needed to reboot
+POWER_REBOOT_WINDOW    = 2.0   # seconds those presses must fall within
+POWER_SHUTDOWN_PRESSES = 5     # presses needed to shutdown
+POWER_SHUTDOWN_WINDOW  = 3.0   # seconds those presses must fall within
+POWER_REBOOT_DELAY     = 1.5   # seconds to wait after reboot threshold before firing,
+                                # giving the user time to add more presses for shutdown
 ROLLBACK_PRESS_SECONDS = 3
 SHORT_PRESS_MAX = 2
-
-REBOOT_PRESS_SECONDS = 5
 
 # ------------------------------------------------------------------
 # Paths
@@ -74,10 +76,6 @@ VIDEO_MPV_LOG = (
 
 UPDATE_LOCK_FILE = (
     CONFIG_DIR / "update.lock"
-)
-
-INSTALLED_VIDEO_NAME = (
-    "instruction.mp4"
 )
 
 CONVERT_COMMAND = "/usr/bin/convert"
