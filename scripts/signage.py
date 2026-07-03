@@ -282,9 +282,16 @@ class Signage:
     def reboot(self):
         logger.info("Reboot requested")
         self.running = False
-        self.led.set_state(STATE_BOOTING)  # slow pulse while shutting down
+        self.led.set_state(STATE_BOOTING)
         self.cleanup()
         subprocess.run(["sudo", "reboot"])
+
+    def shutdown(self):
+        logger.info("Shutdown requested")
+        self.running = False
+        self.led.set_state(STATE_BOOTING)
+        self.cleanup()
+        subprocess.run(["sudo", "shutdown", "-h", "now"])
 
     # ------------------------------------------------------------------
     # Main loop
@@ -331,8 +338,7 @@ class Signage:
             elif command == CMD_REBOOT:
                 self.reboot()
             elif command == CMD_SHUTDOWN:
-                self.led.set_state(STATE_BOOTING)  # slow pulse while shutting down
-                self.running = False
+                self.shutdown()
 
         self.cleanup()
 
