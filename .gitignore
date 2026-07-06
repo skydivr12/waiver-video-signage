@@ -1,0 +1,82 @@
+# ───────────────────────────────────────────
+# Python
+# ───────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+.env/
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+*.egg
+.eggs/
+
+# Testing & coverage
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+
+# ───────────────────────────────────────────
+# Environment & secrets — NEVER commit these
+# ───────────────────────────────────────────
+.env
+.env.*
+*.env
+secrets.py
+config_local.py
+config.local.py
+
+# ───────────────────────────────────────────
+# Raspberry Pi / hardware
+# ───────────────────────────────────────────
+/var/run/pigpio.pid
+
+# ───────────────────────────────────────────
+# Flask
+# ───────────────────────────────────────────
+instance/
+flask_session/
+*.db
+*.sqlite
+*.sqlite3
+
+# ───────────────────────────────────────────
+# pygame / media
+# ───────────────────────────────────────────
+# *.mp4
+# *.avi
+# *.mkv
+# *.mov
+# *.wav
+# *.mp3
+
+# ───────────────────────────────────────────
+# OS / editor junk
+# ───────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+*.code-workspace
+.idea/
+
+# ───────────────────────────────────────────
+# Logs & temp files
+# ───────────────────────────────────────────
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+~$*
