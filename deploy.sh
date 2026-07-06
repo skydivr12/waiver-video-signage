@@ -14,7 +14,7 @@
 #   chmod +x deploy.sh && sudo ./deploy.sh
 #
 # Requirements:
-#   - Raspberry Pi OS Lite (Bookworm / Debian 12 or newer)
+#   - Raspberry Pi OS Lite (Bookworm / Debian 12, or Trixie / Debian 13)
 #   - Internet connection (only needed during deployment)
 #   - Run as root (sudo)
 #
@@ -336,18 +336,32 @@ fi
 
 header "Step 10: Checking ImageMagick policy"
 
-POLICY_FILE="/etc/ImageMagick-6/policy.xml"
+# Bookworm/Debian 12 ships ImageMagick 6 (/etc/ImageMagick-6/policy.xml).
+# Trixie/Debian 13 ships ImageMagick 7 (/etc/ImageMagick-7/policy.xml).
+# Patch whichever one is actually present.
+POLICY_CANDIDATES=(
+    "/etc/ImageMagick-7/policy.xml"
+    "/etc/ImageMagick-6/policy.xml"
+)
 
-if [ -f "$POLICY_FILE" ]; then
+POLICY_FILE=""
+for candidate in "${POLICY_CANDIDATES[@]}"; do
+    if [ -f "$candidate" ]; then
+        POLICY_FILE="$candidate"
+        break
+    fi
+done
+
+if [ -n "$POLICY_FILE" ]; then
     sed -i 's/rights="none" pattern="PDF"/rights="read|write" pattern="PDF"/g' "$POLICY_FILE"
     sed -i 's/rights="none" pattern="PS"/rights="read|write" pattern="PS"/g'   "$POLICY_FILE"
     sed -i 's/rights="none" pattern="PS2"/rights="read|write" pattern="PS2"/g' "$POLICY_FILE"
     sed -i 's/rights="none" pattern="PS3"/rights="read|write" pattern="PS3"/g' "$POLICY_FILE"
     sed -i 's/rights="none" pattern="EPS"/rights="read|write" pattern="EPS"/g' "$POLICY_FILE"
     sed -i 's/rights="none" pattern="XPS"/rights="read|write" pattern="XPS"/g' "$POLICY_FILE"
-    success "ImageMagick policy updated"
+    success "ImageMagick policy updated ($POLICY_FILE)"
 else
-    warn "ImageMagick policy file not found at $POLICY_FILE"
+    warn "No ImageMagick policy file found (checked: ${POLICY_CANDIDATES[*]})"
 fi
 
 # -----------------------------------------------------------------------------
