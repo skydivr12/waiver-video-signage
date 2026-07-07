@@ -13,6 +13,10 @@
 #   or if you already have the file:
 #   chmod +x deploy.sh && sudo ./deploy.sh
 #
+#   To deploy from a branch other than master, set REPO_BRANCH (this also
+#   controls which branch's copy of deploy.sh you should fetch, so they match):
+#   curl -fsSL https://raw.githubusercontent.com/skydivr12/waiver-video-signage/raspios-trixie/deploy.sh | sudo REPO_BRANCH=raspios-trixie bash
+#
 # Requirements:
 #   - Raspberry Pi OS Lite (Bookworm / Debian 12, or Trixie / Debian 13)
 #   - Internet connection (only needed during deployment)
@@ -27,7 +31,7 @@ set -e
 # -----------------------------------------------------------------------------
 
 REPO_URL="https://github.com/skydivr12/waiver-video-signage"
-REPO_BRANCH="master"
+REPO_BRANCH="${REPO_BRANCH:-master}"
 REPO_DIR="/tmp/waiver-video-signage"
 
 INSTALL_ROOT="/opt/signage"
