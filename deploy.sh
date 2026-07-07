@@ -500,10 +500,16 @@ check_media_present() {
     has_ads=false
     has_video=false
     for f in "$INSTALL_ROOT/ads/"*; do
-        [ -f "$f" ] && has_ads=true && break
+        if [ -f "$f" ]; then
+            has_ads=true
+            break
+        fi
     done
     for f in "$INSTALL_ROOT/videos/"*; do
-        [ -f "$f" ] && has_video=true && break
+        if [ -f "$f" ]; then
+            has_video=true
+            break
+        fi
     done
 }
 
