@@ -271,6 +271,12 @@ for dir in "${DIRS[@]}"; do
     success "Directory ready: $dir"
 done
 
+# Pre-create the shared log file now, before anything can create it as root
+# (see Step 15) — otherwise whichever process opens it first "wins" the
+# ownership, and signage.service/button.service (running as $SERVICE_USER)
+# would get locked out of a root-owned file.
+touch "$INSTALL_ROOT/logs/signage.log"
+
 chown -R "$SERVICE_USER:$SERVICE_GROUP" "$INSTALL_ROOT"
 chown root:root "$USB_MOUNT"
 success "Ownership set: $INSTALL_ROOT → $SERVICE_USER:$SERVICE_GROUP"
@@ -540,6 +546,11 @@ if { [ "$has_ads" = false ] || [ "$has_video" = false ]; } && [ -t 0 ]; then
                 warn "Content on the drive didn't load — fix it on the drive and it'll retry automatically."
                 warn "(or press 's' then Enter to stop waiting)"
             fi
+            # usb_update.py just ran as root (needed for mount/umount) and may
+            # have created/modified files under $INSTALL_ROOT (content, manifest,
+            # log). Restore ownership so $SERVICE_USER's services can still
+            # read/write them.
+            chown -R "$SERVICE_USER:$SERVICE_GROUP" "$INSTALL_ROOT"
         fi
 
         if [ "$WAITING" = true ]; then
