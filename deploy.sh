@@ -17,6 +17,11 @@
 #   controls which branch's copy of deploy.sh you should fetch, so they match):
 #   curl -fsSL https://raw.githubusercontent.com/skydivr12/waiver-video-signage/raspios-trixie/deploy.sh | sudo REPO_BRANCH=raspios-trixie bash
 #
+#   Note: the interactive USB drive setup (Step 6) and the wait-for-USB
+#   prompt (Step 15) only run when this script has a real terminal attached.
+#   Piping via curl | sudo bash does not — download the file first and run
+#   it directly (chmod +x deploy.sh && sudo ./deploy.sh) to get those prompts.
+#
 # Requirements:
 #   - Raspberry Pi OS Lite (Bookworm / Debian 12, or Trixie / Debian 13)
 #   - Internet connection (only needed during deployment)
@@ -195,10 +200,58 @@ git clone --branch "$REPO_BRANCH" --depth 1 "$REPO_URL" "$REPO_DIR"
 success "Repository cloned to $REPO_DIR"
 
 # -----------------------------------------------------------------------------
-# Step 6: Create directory structure
+# Step 6: Prepare USB update drive (interactive only, does not block install)
 # -----------------------------------------------------------------------------
 
-header "Step 6: Creating directory structure"
+header "Step 6: Prepare USB update drive"
+
+if [ "$IS_UPDATE" = true ]; then
+    info "Update mode — skipping USB drive setup prompt"
+    info "Run any time: sudo python3 $SCRIPTS_DIR/prep_usb.py"
+elif [ ! -t 0 ]; then
+    info "Non-interactive install — skipping USB drive setup prompt"
+    info "Prepare your USB drive manually, or run later: sudo python3 $SCRIPTS_DIR/prep_usb.py"
+else
+    echo ""
+    echo -e "  A USB drive (exFAT) is how you load ad images, showcase images,"
+    echo -e "  and the instructional video onto this signage box."
+    echo ""
+    echo -e "  Setting one up now costs a couple of minutes, but then you can load"
+    echo -e "  your media onto it on another computer while the rest of this"
+    echo -e "  install keeps running in the background."
+    echo ""
+    read -r -p "  Set up a USB update drive now? [Y/n]: " SETUP_USB
+    SETUP_USB="${SETUP_USB:-y}"
+    case "${SETUP_USB,,}" in
+        y|yes)
+            if python3 "$REPO_DIR/scripts/prep_usb.py"; then
+                success "USB drive ready"
+                echo ""
+                echo -e "  ${YELLOW}Remove the drive now and load your content onto it:${NC}"
+                echo -e "    ${BLUE}ads/${NC}                 at least 1 image or video"
+                echo -e "    ${BLUE}showcase/${NC}            optional images"
+                echo -e "    ${BLUE}videos/${NC}              exactly 1 instructional video"
+                echo ""
+                echo -e "  Keep the drive handy — the installer will ask you to insert it"
+                echo -e "  again once services are ready to start, later in this run."
+                echo ""
+            else
+                warn "USB drive setup did not complete — you can run it again any time with:"
+                warn "  sudo python3 $SCRIPTS_DIR/prep_usb.py"
+            fi
+            ;;
+        *)
+            info "Skipping — run it manually any time with:"
+            info "  sudo python3 $SCRIPTS_DIR/prep_usb.py"
+            ;;
+    esac
+fi
+
+# -----------------------------------------------------------------------------
+# Step 7: Create directory structure
+# -----------------------------------------------------------------------------
+
+header "Step 7: Creating directory structure"
 
 DIRS=(
     "$INSTALL_ROOT/ads"        # Ad images and videos shown in the slideshow loop
@@ -223,10 +276,10 @@ chown root:root "$USB_MOUNT"
 success "Ownership set: $INSTALL_ROOT → $SERVICE_USER:$SERVICE_GROUP"
 
 # -----------------------------------------------------------------------------
-# Step 7: Install Python scripts
+# Step 8: Install Python scripts
 # -----------------------------------------------------------------------------
 
-header "Step 7: Installing Python scripts"
+header "Step 8: Installing Python scripts"
 
 SCRIPTS=(
     "signage.py"
@@ -280,10 +333,10 @@ if [ -d "$REPO_DIR/docs" ]; then
 fi
 
 # -----------------------------------------------------------------------------
-# Step 8: Install systemd service files
+# Step 9: Install systemd service files
 # -----------------------------------------------------------------------------
 
-header "Step 8: Installing systemd services"
+header "Step 9: Installing systemd services"
 
 SERVICES=(
     "signage.service"
@@ -316,10 +369,10 @@ systemctl enable signage-update.service
 success "Enabled: signage-update.service (triggered by udev)"
 
 # -----------------------------------------------------------------------------
-# Step 9: Install udev rules
+# Step 10: Install udev rules
 # -----------------------------------------------------------------------------
 
-header "Step 9: Installing udev rules"
+header "Step 10: Installing udev rules"
 
 UDEV_SRC="$INSTALL_ROOT/deploy/udev/99-signage-update.rules"
 UDEV_DST="/etc/udev/rules.d/99-signage-update.rules"
@@ -335,10 +388,10 @@ else
 fi
 
 # -----------------------------------------------------------------------------
-# Step 10: Check ImageMagick security policy
+# Step 11: Check ImageMagick security policy
 # -----------------------------------------------------------------------------
 
-header "Step 10: Checking ImageMagick policy"
+header "Step 11: Checking ImageMagick policy"
 
 # Bookworm/Debian 12 ships ImageMagick 6 (/etc/ImageMagick-6/policy.xml).
 # Trixie/Debian 13 ships ImageMagick 7 (/etc/ImageMagick-7/policy.xml).
@@ -369,10 +422,10 @@ else
 fi
 
 # -----------------------------------------------------------------------------
-# Step 11: Verify Python libraries
+# Step 12: Verify Python libraries
 # -----------------------------------------------------------------------------
 
-header "Step 11: Verifying Python libraries"
+header "Step 12: Verifying Python libraries"
 
 PYTHON_LIBS=(
     "gpiozero:gpiozero (GPIO control)"
@@ -390,10 +443,10 @@ for entry in "${PYTHON_LIBS[@]}"; do
 done
 
 # -----------------------------------------------------------------------------
-# Step 12: Display hardening — fresh install only, skip if already applied
+# Step 13: Display hardening — fresh install only, skip if already applied
 # -----------------------------------------------------------------------------
 
-header "Step 12: Display hardening"
+header "Step 13: Display hardening"
 
 CMDLINE_FILE="/boot/firmware/cmdline.txt"
 
@@ -429,30 +482,77 @@ else
 fi
 
 # -----------------------------------------------------------------------------
-# Step 13: Clean up
+# Step 14: Clean up
 # -----------------------------------------------------------------------------
 
-header "Step 13: Cleaning up"
+header "Step 14: Cleaning up"
 
 rm -rf "$REPO_DIR"
 success "Removed temporary clone: $REPO_DIR"
 
 # -----------------------------------------------------------------------------
-# Step 14: Check for media content
+# Step 15: Check for media content
 # -----------------------------------------------------------------------------
 
-header "Step 14: Checking for media content"
+header "Step 15: Checking for media content"
 
-has_ads=false
-has_video=false
+check_media_present() {
+    has_ads=false
+    has_video=false
+    for f in "$INSTALL_ROOT/ads/"*; do
+        [ -f "$f" ] && has_ads=true && break
+    done
+    for f in "$INSTALL_ROOT/videos/"*; do
+        [ -f "$f" ] && has_video=true && break
+    done
+}
 
-for f in "$INSTALL_ROOT/ads/"*; do
-    [ -f "$f" ] && has_ads=true && break
-done
+check_media_present
 
-for f in "$INSTALL_ROOT/videos/"*; do
-    [ -f "$f" ] && has_video=true && break
-done
+# If content is missing and we have a real terminal, actively wait for the
+# USB drive to be (re)inserted instead of just starting services and hoping
+# udev triggers signage-update.service in time.
+if { [ "$has_ads" = false ] || [ "$has_video" = false ]; } && [ -t 0 ]; then
+    echo ""
+    echo -e "  ${YELLOW}No media content installed yet.${NC}"
+    echo -e "  Insert your prepared USB drive now — it'll be picked up automatically."
+    echo -e "  Press 's' then Enter at any time to stop waiting and continue."
+    echo ""
+
+    WAITING=true
+    ATTEMPTS=0
+    MAX_ATTEMPTS=150   # ~5 minutes at roughly 2s per attempt
+
+    while [ "$WAITING" = true ] && [ "$ATTEMPTS" -lt "$MAX_ATTEMPTS" ]; do
+        DEVICE=$(blkid -t TYPE=exfat -o device 2>/dev/null | head -1)
+        if [ -n "$DEVICE" ]; then
+            info "Found USB drive at $DEVICE — checking content..."
+            if python3 "$SCRIPTS_DIR/usb_update.py"; then
+                success "Content loaded from USB"
+                WAITING=false
+            else
+                warn "Content on the drive didn't load — fix it on the drive and it'll retry automatically."
+                warn "(or press 's' then Enter to stop waiting)"
+            fi
+        fi
+
+        if [ "$WAITING" = true ]; then
+            if read -r -t 2 -n 1 key 2>/dev/null; then
+                if [ "${key,,}" = "s" ]; then
+                    warn "Skipping — the drive will still auto-update once inserted after services start."
+                    WAITING=false
+                fi
+            fi
+        fi
+        ATTEMPTS=$((ATTEMPTS + 1))
+    done
+
+    if [ "$WAITING" = true ]; then
+        warn "Timed out waiting for a USB drive — continuing without content."
+    fi
+
+    check_media_present
+fi
 
 MEDIA_READY=true
 
@@ -470,6 +570,7 @@ if [ "$has_ads" = false ] || [ "$has_video" = false ]; then
     echo -e "    ${BLUE}showcase/${NC}            (optional)"
     echo -e "    ${BLUE}videos/${NC}              (exactly 1 instructional video)"
     echo ""
+    echo -e "  Easiest way to build one: ${BLUE}sudo python3 $SCRIPTS_DIR/prep_usb.py${NC}"
     echo -e "  Insert the USB drive after the services start — the update runs automatically."
     echo ""
 
@@ -488,10 +589,10 @@ else
 fi
 
 # -----------------------------------------------------------------------------
-# Step 15: Start / restart services
+# Step 16: Start / restart services
 # -----------------------------------------------------------------------------
 
-header "Step 15: $([ "$IS_UPDATE" = true ] && echo 'Restarting' || echo 'Starting') services"
+header "Step 16: $([ "$IS_UPDATE" = true ] && echo 'Restarting' || echo 'Starting') services"
 
 case "${START_SERVICES,,}" in
     y|yes|"")

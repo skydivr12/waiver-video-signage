@@ -107,7 +107,14 @@ def validate_version(root):
     if not version_file.exists():
         raise RuntimeError("Missing content_version.json")
     with open(version_file) as f:
-        json.load(f)
+        try:
+            json.load(f)
+        except json.JSONDecodeError as e:
+            raise RuntimeError(
+                f"content_version.json is not valid JSON ({e}). "
+                f"Re-create the USB drive with prep_usb.py rather than "
+                f"hand-creating this file."
+            ) from e
 
 
 def validate_content(root):
